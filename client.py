@@ -5,7 +5,6 @@ import tkinter as tk
 import datetime
 import pickle
 import os
-from server import messages_list
 from tkinter import scrolledtext
 from tkinter import messagebox
 
@@ -25,6 +24,7 @@ SMALL_FONT = ("Helvetica", 13)
 # SOCK_STREAM: we are using TCP packets for communication
 client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
+messages_list = []
 messages_have_keyword = []
 
 def get_current_time():
@@ -66,6 +66,7 @@ def connect():
 def send_message():
     message = message_textbox.get()
     if message != '':
+        messages_list.append(message)
         client.sendall(message.encode())
         message_textbox.delete(0, tk.END)
     else:
@@ -74,6 +75,7 @@ def send_message():
 def send_message():
     message = message_textbox.get()
     if message != '':
+        messages_list.append(message)
         client.sendall(message.encode())
         message_textbox.delete(0, tk.END)
     else:
@@ -89,7 +91,7 @@ def search_strings(arr, small_string):
 def enter_keyword():
     keyword = keyword_textbox.get()
     if keyword != '':
-        search_keyword = [msg for msg in messages_list if keyword in msg]
+        search_keyword = search_strings(messages_list, keyword)
         keyword_box.config(state=tk.NORMAL)
         keyword_box.delete(1.0, tk.END)  # Clear previous results
         if search_keyword:
@@ -99,6 +101,88 @@ def enter_keyword():
             keyword_box.insert(tk.END, "No matching messages found.\n")
             keyword_box.config(state=tk.DISABLED)
     else:
+        messagebox.showerror("Empty keyword", "Keyword cannot be empty")
+
+def send_search_request():
+    threading.Thread(target=enter_keyword).start()
+
+
+def save_messages_to_file():
+    current_time = get_current_time().replace(" ", "_").replace(":", "-")
+    filename = f"messages_{current_time}.dat"
+    
+    current_directory = os.getcwd()
+    full_path = os.path.join(current_directory, filename)
+    
+    messagebox.showinfo("Save Messages", f"Messages saved to {full_path}")
+  
+    
+        
+   
+
+# Sử dụng hàm search_keyword_in_messages khi cần tìm kiếm từ khoá
+root = tk.Tk()
+root.geometry("1000x600")
+root.title("Messenger Client")
+root.resizable(False, False)
+
+root.grid_rowconfigure(0, weight=1)
+root.grid_rowconfigure(1, weight=4)
+root.grid_rowconfigure(2, weight=1)
+root.grid_columnconfigure(0, weight=1)
+root.grid_columnconfigure(1, weight=6)
+
+
+lefttop_frame = tk.Frame(root, width=600, height=100, bg=DARK_GREY)
+lefttop_frame.grid(row=0, column=0, sticky=tk.NSEW)
+
+leftmiddle_frame = tk.Frame(root, width=600, height=400, bg=MEDIUM_GREY)
+leftmiddle_frame.grid(row=1, column=0, sticky=tk.NSEW)
+
+leftbottom_frame = tk.Frame(root, width=600, height=100, bg=DARK_GREY)
+leftbottom_frame.grid(row=2, column=0, sticky=tk.NSEW)
+
+# Frame bên phải
+righttop_frame = tk.Frame(root, width=400, height=100, bg=OCEAN_BLUE    )
+righttop_frame.grid(row=0, column=0, sticky=tk.NSEW)
+
+rightmiddle_frame= tk.Frame(root, width=400, height=400, bg=DARK_GREY)
+rightmiddle_frame.grid(row=1, column=0,sticky=tk.NSEW)
+
+
+rightbottom_frame= tk.Frame(root, width=400, height=100, bg=DARK_GREY)
+rightbottom_frame.grid(row=2, column=0, sticky=tk.NSEW)
+
+
+# Widget cho ô nhập tin nhắn và nút gửi
+lefttop_frame = tk.Frame(root, width=600, height=100, bg=DARK_GREY)
+lefttop_frame.grid(row=0, column=0, sticky=tk.NSEW)
+
+leftmiddle_frame = tk.Frame(root, width=600, height=400, bg=MEDIUM_GREY)
+leftmiddle_frame.grid(row=1, column=0, sticky=tk.NSEW)
+
+leftbottom_frame = tk.Frame(root, width=600, height=100, bg=DARK_GREY)
+leftbottom_frame.grid(row=2, column=0, sticky=tk.NSEW)
+
+username_label = tk.Label(lefttop_frame, text="Enter username:", font=FONT, bg=DARK_GREY, fg=WHITE)
+username_label.pack(side=tk.LEFT)
+
+username_textbox = tk.Entry(lefttop_frame, font=FONT, bg=MEDIUM_GREY, fg=WHITE, width=23)
+username_textbox.pack(side=tk.LEFT)
+
+username_button = tk.Button(lefttop_frame, text="Join", font=BUTTON_FONT, bg=OCEAN_BLUE, fg=WHITE, command=connect)
+username_button.pack(side=tk.LEFT, padx=15)
+
+message_textbox = tk.Entry(leftbottom_frame, font=FONT, bg=MEDIUM_GREY, fg=WHITE, width=25)
+message_textbox.pack(side=tk.LEFT, padx=10)
+
+message_button = tk.Button(leftbottom_frame, text="Send", font=BUTTON_FONT, bg=OCEAN_BLUE, fg=WHITE, command=send_message)
+message_button.pack(side=tk.LEFT, padx=10)
+
+message_box = scrolledtext.ScrolledText(leftmiddle_frame, font=SMALL_FONT, bg=MEDIUM_GREY, fg=WHITE, width=67, height=26.5)
+
+message_box.config(state=tk.DISABLED)
+message_box.pack(side=tk.TOP)
 
 save_button = tk.Button(leftbottom_frame, text="Save", font=BUTTON_FONT, bg=OCEAN_BLUE, fg=WHITE, command=save_messages_to_file)
 save_button.pack(side=tk.LEFT, padx=10)
@@ -144,14 +228,26 @@ def listen_for_messages_from_server(client):
         else:
             messagebox.showerror("Error", "Message recevied from client is empty")
 
+def listen_for_messages_from_server(client):
+
+    while 1:
+
+        message = client.recv(2048).decode('utf-8')
+        if message != '':
+            username = message.split("~")[0]
+            content = message.split('~')[1]
+
+            add_message(f"[{username}] {content}")
+ 
+            
+            
+        else:
+            messagebox.showerror("Error", "Message recevied from client is empty")
+
 
 # main function
 def main():
     root.mainloop()
 
-if _name_ == '_main_':
+if __name__ == '__main__':
     main()
-    
-
-
-            

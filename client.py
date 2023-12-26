@@ -93,6 +93,13 @@ def enter_keyword():
         keyword_box.config(state=tk.NORMAL)
         keyword_box.delete(1.0, tk.END)  # Clear previous results
         if search_keyword:
+            for result in search_keyword:
+                keyword_box.insert(tk.END, result + '\n')
+        else:
+            keyword_box.insert(tk.END, "No matching messages found.\n")
+            keyword_box.config(state=tk.DISABLED)
+    else:
+
 save_button = tk.Button(leftbottom_frame, text="Save", font=BUTTON_FONT, bg=OCEAN_BLUE, fg=WHITE, command=save_messages_to_file)
 save_button.pack(side=tk.LEFT, padx=10)
 
@@ -137,22 +144,6 @@ def listen_for_messages_from_server(client):
         else:
             messagebox.showerror("Error", "Message recevied from client is empty")
 
-def listen_for_messages_from_server(client):
-
-    while 1:
-
-        message = client.recv(2048).decode('utf-8')
-        if message != '':
-            username = message.split("~")[0]
-            content = message.split('~')[1]
-
-            add_message(f"[{username}] {content}")
- 
-            
-            
-        else:
-            messagebox.showerror("Error", "Message recevied from client is empty")
-
 
 # main function
 def main():
@@ -160,10 +151,7 @@ def main():
 
 if _name_ == '_main_':
     main()
+    
 
-            for result in search_keyword:
-                keyword_box.insert(tk.END, result + '\n')
-        else:
-            keyword_box.insert(tk.END, "No matching messages found.\n")
-            keyword_box.config(state=tk.DISABLED)
-    else:
+
+            
